@@ -22,7 +22,9 @@
   "dependencies": {
     "@aws-cdk/aws-apigateway": "^1.38.0",
     "@aws-cdk/aws-lambda": "^1.19.0",
+    "@aws-sdk/client-dynamodb": "^3.751.0",
     "aws-cdk-lib": "2.178.1",
-    "constructs": "^10.0.0"
+    "constructs": "^10.0.0",
+    "uuid": "^11.1.0"
   }
 }
