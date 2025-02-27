@@ -174,6 +174,9 @@ cdk destroy
 
 ---
 
+## Swagger documentation
+- [https://app.swaggerhub.com/apis-docs/twistertransllc/product-service_api/1.0.0](https://app.swaggerhub.com/apis-docs/twistertransllc/product-service_api/1.0.0)
+
 ## 🎨 Maintained by
 
 **Nadzeya Kaluzayeva**
