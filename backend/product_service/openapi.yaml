@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Product Service API
-  description: API for retrieving product details from AWS Lambda.
+  description: API for retrieving and managing products in AWS Lambda.
   version: 1.0.0
 servers:
   - url: https://x6rf0rm2zi.execute-api.us-east-1.amazonaws.com/prod/
@@ -24,6 +24,30 @@ paths:
                   $ref: "#/components/schemas/Product"
         "500":
           description: Internal Server Error
+      tags:
+        - Products
+
+    post:
+      summary: Create a new product
+      description: Creates a new product with stock information.
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Product created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateProductResponse"
+        "400":
+          description: Invalid input data.
+        "500":
+          description: Internal Server Error.
       tags:
         - Products
 
@@ -53,6 +77,56 @@ paths:
       tags:
         - Products
 
+    delete:
+      summary: Delete product by ID
+      description: Removes a product from the database along with its stock.
+      operationId: deleteProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to delete.
+      responses:
+        "200":
+          description: Product deleted successfully.
+        "404":
+          description: Product not found.
+        "500":
+          description: Internal Server Error.
+      tags:
+        - Products
+
+    put:
+      summary: Update product by ID
+      description: Updates an existing product and its stock.
+      operationId: updateProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        "200":
+          description: Product updated successfully.
+        "400":
+          description: Invalid input data.
+        "404":
+          description: Product not found.
+        "500":
+          description: Internal Server Error.
+      tags:
+        - Products
+
 components:
   schemas:
     Product:
@@ -60,10 +134,46 @@ components:
       properties:
         id:
           type: string
-          example: "1"
+          example: "229f24ab-2751-43db-9c63-d14e10d5b73d"
         title:
           type: string
-          example: "Laptop"
+          example: "Nutro Wholesome Essentials Natural Dry Cat Food"
+        description:
+          type: string
+          example: "Made with real chicken and brown rice for a nutritious diet."
         price:
           type: number
-          example: 1000
+          example: 21.99
+        count:
+          type: integer
+          example: 5
+
+    CreateProductRequest:
+      type: object
+      required:
+        - title
+        - price
+        - count
+      properties:
+        title:
+          type: string
+          example: "Gaming Mouse"
+        description:
+          type: string
+          example: "Ergonomic gaming mouse with RGB lighting."
+        price:
+          type: number
+          example: 49.99
+        count:
+          type: integer
+          example: 10
+
+    CreateProductResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Product created successfully!"
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
