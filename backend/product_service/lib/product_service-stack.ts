@@ -95,6 +95,36 @@ export class ProductServiceStack extends cdk.Stack {
       value: api.url,
     });
 
-    console.log("🚀 Product Service Stack deployed successfully!");
+    const deleteProductLambda = new lambda.Function(this, "deleteProduct", {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "deleteProduct.handler",
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
+    });
+    
+    productsTable.grantReadWriteData(deleteProductLambda);
+    stocksTable.grantReadWriteData(deleteProductLambda);
+    
+    product.addMethod("DELETE", new apigateway.LambdaIntegration(deleteProductLambda));    
+
+    const updateProductLambda = new lambda.Function(this, "updateProduct", {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "updateProduct.handler",
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
+    });
+    
+    productsTable.grantReadWriteData(updateProductLambda);
+    stocksTable.grantReadWriteData(updateProductLambda);
+    
+    product.addMethod("PUT", new apigateway.LambdaIntegration(updateProductLambda));    
+
+    console.log("Product Service Stack deployed successfully!");
   }
 }

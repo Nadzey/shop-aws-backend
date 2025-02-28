@@ -127,3 +127,53 @@ components:
         id:
           type: string
           example: "550e8400-e29b-41d4-a716-446655440000"
+  /products/{productId}:
+    delete:
+      summary: Delete product by ID
+      description: Removes a product from the database along with its stock.
+      operationId: deleteProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to delete.
+      responses:
+        "200":
+          description: Product deleted successfully.
+        "404":
+          description: Product not found.
+        "500":
+          description: Internal Server Error.
+      tags:
+        - Products
+  /products/{productId}:
+    put:
+      summary: Update product by ID
+      description: Updates an existing product and its stock.
+      operationId: updateProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        "200":
+          description: Product updated successfully.
+        "400":
+          description: Invalid input data.
+        "404":
+          description: Product not found.
+        "500":
+          description: Internal Server Error.
+      tags:
+        - Products
