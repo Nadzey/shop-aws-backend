@@ -13,46 +13,10 @@ export class ImportServiceStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create S3 bucket with "uploaded" folder
-    const importBucket = new s3.Bucket(this, "XXXXXXXXXXXX", {
+    const importBucket = new s3.Bucket(this, "ImportBucket", {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       autoDeleteObjects: false,
-      websiteIndexDocument: 'index.html',
-      websiteErrorDocument: 'index.html',
-      cors: [
-        {
-          allowedMethods: [s3.HttpMethods.GET],
-          allowedOrigins: ['*'],
-          allowedHeaders: ['*'],
-        },
-      ],
     });
-
-    const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, "SPAResponseHeadersPolicy", {
-      responseHeadersPolicyName: "SPAResponseHeadersPolicy",
-      comment: "Response headers policy for SPA",
-      securityHeadersBehavior: {
-        frameOptions: { 
-          override: true,
-          frameOption: cloudfront.HeadersFrameOption.DENY,
-        },
-        contentTypeOptions: { override: true },
-        strictTransportSecurity: {
-          override: true,
-          accessControlMaxAge: cdk.Duration.days(365),
-          includeSubdomains: true,
-          preload: true,
-        },
-        referrerPolicy: {
-          override: true,
-          referrerPolicy: cloudfront.HeadersReferrerPolicy.NO_REFERRER,
-        },
-        xssProtection: {
-          override: true,
-          protection: true,
-          modeBlock: true,
-        },
-      },
-    });    
 
     // IAM Role for Lambda functions to interact with S3
     const lambdaS3Role = new iam.Role(this, "LambdaS3Role", {
@@ -114,42 +78,12 @@ export class ImportServiceStack extends cdk.Stack {
       { prefix: "uploaded/" }
     );
 
-    // CloudFront Distribution for Frontend
-    const distribution = new cloudfront.Distribution(this, "CloudFrontDistribution", {
-      defaultBehavior: {
-        origin: new origins.S3Origin(importBucket),
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: new cloudfront.CachePolicy(this, 'SPACachePolicy', {
-          minTtl: cdk.Duration.seconds(0),
-          maxTtl: cdk.Duration.days(365),
-          defaultTtl: cdk.Duration.days(1),
-          enableAcceptEncodingGzip: true,
-          enableAcceptEncodingBrotli: true,
-        }),
-        responseHeadersPolicy: responseHeadersPolicy,
-      },
-      errorResponses: [
-        {
-          httpStatus: 403,
-          responseHttpStatus: 200,
-          responsePagePath: '/index.html',
-        },
-        {
-          httpStatus: 404,
-          responseHttpStatus: 200,
-          responsePagePath: '/index.html',
-        },
-      ],
-      comment: "Import Service CloudFront",
-    });
-
-    // Add a consistent logical ID to prevent URL changes
-    const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
-    cfnDistribution.overrideLogicalId('ImportServiceDistribution');
+    // Use the existing CloudFront distribution from Frontend
+    const frontendCloudFrontDomainName = cdk.Fn.importValue("FrontendCloudFrontURL");
     
     // Outputs
     new cdk.CfnOutput(this, "BucketName", { value: importBucket.bucketName });
-    new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url });
-    new cdk.CfnOutput(this, "CloudFrontURL", { value: distribution.domainName });
+    new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url, exportName: "ImportServiceApiUrl" });
+    new cdk.CfnOutput(this, "CloudFrontURL", { value: frontendCloudFrontDomainName, exportName: "ImportServiceCloudFrontURL" });
   }
 }
