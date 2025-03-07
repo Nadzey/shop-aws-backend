@@ -7,5 +7,9 @@
   },
   "scripts": {
     "test": "jest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.751.0",
+    "uuid": "^11.1.0"
   }
 }

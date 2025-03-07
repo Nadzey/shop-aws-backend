@@ -22,7 +22,13 @@
     "strictPropertyInitialization": false,
     "typeRoots": [
       "./node_modules/@types"
-    ]
+    ],
+      "allowJs": true,
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "outDir": "dist",
+      "rootDir": "./",
+      "resolveJsonModule": true
   },
   "exclude": [
     "node_modules",
