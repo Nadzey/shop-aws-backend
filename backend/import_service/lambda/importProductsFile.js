@@ -9,6 +9,11 @@ module.exports.handler = async (event) => {
     if (!fileName) {
       return {
         statusCode: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "OPTIONS, GET",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
         body: JSON.stringify({ error: "Missing 'name' query parameter" }),
       };
     }
@@ -24,12 +29,22 @@ module.exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify(signedUrl),
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "OPTIONS, GET",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+      body: JSON.stringify({ url: signedUrl }),
     };
   } catch (error) {
     console.error("Error generating signed URL:", error);
     return {
       statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "OPTIONS, GET",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
       body: JSON.stringify({ error: error.message }),
     };
   }
