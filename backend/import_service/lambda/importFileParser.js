@@ -8,17 +8,17 @@ const STOCKS_TABLE = process.env.STOCKS_TABLE_NAME;
 
 if (!PRODUCTS_TABLE || !STOCKS_TABLE) {
   console.error(
-    "❌ Missing DynamoDB table names. Check environment variables."
+    "Missing DynamoDB table names. Check environment variables."
   );
   throw new Error("Missing DynamoDB table names");
 }
 
 module.exports.handler = async (event) => {
   try {
-    console.log("✅ Received event:", JSON.stringify(event, null, 2));
+    console.log("Received event:", JSON.stringify(event, null, 2));
 
     if (!event.Records || event.Records.length === 0 || !event.Records[0].s3) {
-      console.error("❌ Invalid event format. Expected an S3 event.");
+      console.error("Invalid event format. Expected an S3 event.");
       return {
         statusCode: 400,
         body: JSON.stringify({
@@ -37,14 +37,14 @@ module.exports.handler = async (event) => {
       .getObject({ Bucket: bucket, Key: key })
       .createReadStream();
 
-    let results = []; // ✅ Now properly declared outside async scope
-    let promises = []; // ✅ Store all async DynamoDB writes
+    let results = [];
+    let promises = [];
 
     return new Promise((resolve, reject) => {
       s3Stream
         .pipe(csv({ separator: "," }))
         .on("data", (row) => {
-          console.log("📝 Raw CSV Row:", row);
+          console.log("Raw CSV Row:", row);
 
           if (!row.Title || !row.Price || !row.Count) {
             console.warn("⚠️ Skipping invalid row:", row);
@@ -66,10 +66,10 @@ module.exports.handler = async (event) => {
             count: parseInt(row.Count, 10) || 0,
           };
 
-          console.log("✅ Parsed product:", JSON.stringify(product));
-          console.log("✅ Parsed stock:", JSON.stringify(stock));
+          console.log("Parsed product:", JSON.stringify(product));
+          console.log("Parsed stock:", JSON.stringify(stock));
 
-          // ✅ Store promises and make sure `results.push()` happens after a successful insert
+          // Store promises and make sure `results.push()` happens after a successful insert
           const productPromise = dynamodb
             .put({ TableName: PRODUCTS_TABLE, Item: product })
             .promise();
@@ -83,14 +83,14 @@ module.exports.handler = async (event) => {
                 results.push(product);
               })
               .catch((dbError) => {
-                console.error("❌ Error inserting into DynamoDB:", dbError);
+                console.error("Error inserting into DynamoDB:", dbError);
               })
           );
         })
         .on("end", async () => {
-          await Promise.all(promises); // ✅ Ensure all DB writes complete before finishing
+          await Promise.all(promises);
           console.log(
-            `✅ CSV Parsing Complete. Processed rows: ${results.length}`
+            `CSV Parsing Complete. Processed rows: ${results.length}`
           );
 
           resolve({
@@ -102,7 +102,7 @@ module.exports.handler = async (event) => {
           });
         })
         .on("error", (error) => {
-          console.error("❌ CSV Parsing Error:", error);
+          console.error("CSV Parsing Error:", error);
           reject({
             statusCode: 500,
             body: JSON.stringify({
@@ -113,7 +113,7 @@ module.exports.handler = async (event) => {
         });
     });
   } catch (error) {
-    console.error("❌ Processing error:", error);
+    console.error("Processing error:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
