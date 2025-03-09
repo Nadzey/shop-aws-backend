@@ -93,6 +93,11 @@ module.exports.handler = async (event) => {
 
           resolve({
             statusCode: 200,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "OPTIONS, GET, POST",
+              "Access-Control-Allow-Headers": "Content-Type",
+            },
             body: JSON.stringify({
               message: "CSV processed successfully and stored in DynamoDB.",
               products: results,
@@ -103,6 +108,11 @@ module.exports.handler = async (event) => {
           console.error("CSV Parsing Error:", error);
           reject({
             statusCode: 500,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "OPTIONS, GET, POST",
+              "Access-Control-Allow-Headers": "Content-Type",
+            },
             body: JSON.stringify({
               error: "CSV Parsing Failed",
               details: error.message,
@@ -114,6 +124,11 @@ module.exports.handler = async (event) => {
     console.error("Processing error:", error);
     return {
       statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "OPTIONS, GET, POST",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
       body: JSON.stringify({ error: error.message }),
     };
   }
