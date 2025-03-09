@@ -1,0 +1,141 @@
+openapi: 3.0.0
+info:
+  title: Import Service API
+  description: API for uploading and parsing CSV files using AWS S3 and Lambda
+  version: 1.0.0
+
+servers:
+  - url: https://o5oyjdzeee.execute-api.us-east-1.amazonaws.com/prod/
+    description: AWS API Gateway Endpoint
+    variables:
+      api-id:
+        default: "your-api-id"
+
+paths:
+  /import:
+    get:
+      summary: Generate a Signed URL for uploading a CSV file
+      description: Returns a signed URL for uploading a CSV file to an S3 bucket.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Name of the CSV file to be uploaded
+          schema:
+            type: string
+            example: "products.csv"
+      responses:
+        "200":
+          description: Successfully generated a signed URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    example: "https://importservicestack-importbucketbaf3a8e9-zomktrnwkr3g.s3.amazonaws.com/uploaded/products.csv?X-Amz-Signature=..."
+        "400":
+          description: Missing required query parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Missing 'name' query parameter"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error generating signed URL"
+
+  /import/parser:
+    post:
+      summary: Triggered by S3 event when a CSV file is uploaded
+      description: Parses a CSV file uploaded to S3 and stores data in DynamoDB.
+      requestBody:
+        description: Event payload from S3
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Records:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      s3:
+                        type: object
+                        properties:
+                          bucket:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                example: "your-bucket-name"
+                          object:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                example: "uploaded/products.csv"
+      responses:
+        "200":
+          description: Successfully processed the file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "File processed successfully and stored in DynamoDB"
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "123e4567-e89b-12d3-a456-426614174000"
+                        title:
+                          type: string
+                          example: "Product Name"
+                        description:
+                          type: string
+                          example: "Product Description"
+                        price:
+                          type: number
+                          example: 19.99
+                        count:
+                          type: integer
+                          example: 100
+        "400":
+          description: Invalid S3 event format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid event format. Expected an S3 event."
+        "500":
+          description: Error processing CSV file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "CSV Parsing Failed"
