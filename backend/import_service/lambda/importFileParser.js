@@ -7,9 +7,7 @@ const PRODUCTS_TABLE = process.env.PRODUCTS_TABLE_NAME;
 const STOCKS_TABLE = process.env.STOCKS_TABLE_NAME;
 
 if (!PRODUCTS_TABLE || !STOCKS_TABLE) {
-  console.error(
-    "Missing DynamoDB table names. Check environment variables."
-  );
+  console.error("Missing DynamoDB table names. Check environment variables.");
   throw new Error("Missing DynamoDB table names");
 }
 
