@@ -164,7 +164,7 @@ export class ProductServiceStack extends cdk.Stack {
     // Create `deleteProduct` Lambda function
     const deleteProductLambda = new lambda.Function(this, "deleteProduct", {
       runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset("lambda"),
+      code: lambda.Code.fromAsset("../lambda"),
       handler: "deleteProduct.handler",
       environment: {
         PRODUCTS_TABLE: productsTable.tableName,
