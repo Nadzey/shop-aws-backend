@@ -29,9 +29,21 @@ export class ProductServiceStack extends cdk.Stack {
       displayName: "Create Product Notifications",
     });
 
-    // Subscribe an email to the SNS topic
+    // SNS Subscriptions with Filter Policies
     createProductTopic.addSubscription(
-      new subs.EmailSubscription("nadiakoluzaeva@gmail.com") // Change to your email
+      new subs.EmailSubscription("koluzaeva_nadiaa@mail.ru", {
+        filterPolicy: {
+          price: sns.SubscriptionFilter.numericFilter({ greaterThan: 100 }),
+        },
+      })
+    );
+
+    createProductTopic.addSubscription(
+      new subs.EmailSubscription("nadiakoluzaeva@gmail.com", {
+        filterPolicy: {
+          count: sns.SubscriptionFilter.numericFilter({ lessThan: 5 }),
+        },
+      })
     );
 
     // Create API Gateway with CORS enabled

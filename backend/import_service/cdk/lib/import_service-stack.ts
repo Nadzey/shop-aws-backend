@@ -34,7 +34,7 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Subscribe to SNS topic with email notifications
     this.createProductTopic.addSubscription(
-      new subs.EmailSubscription("your-email@example.com")
+      new subs.EmailSubscription("nadiakoluzaeva@gmail.com")
     );
 
     // IAM Role for Lambda functions

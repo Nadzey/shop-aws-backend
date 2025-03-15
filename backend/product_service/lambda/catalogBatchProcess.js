@@ -14,10 +14,7 @@ const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN;
 
 exports.handler = async (event) => {
   try {
-    console.log(
-      "Received messages from SQS:",
-      JSON.stringify(event, null, 2)
-    );
+    console.log("Received messages from SQS:", JSON.stringify(event, null, 2));
 
     const transactItems = event.Records.map((record) => {
       const { title, description, price, count } = JSON.parse(record.body);
@@ -59,6 +56,11 @@ exports.handler = async (event) => {
         TopicArn: SNS_TOPIC_ARN,
         Message: `New ${event.Records.length} products added.`,
         Subject: "Product Import Notification",
+        MessageAttributes: {
+          price: { DataType: "Number", StringValue: price.toString() },
+          count: { DataType: "Number", StringValue: count.toString() },
+          category: { DataType: "String", StringValue: category || "General" },
+        },
       })
     );
 
