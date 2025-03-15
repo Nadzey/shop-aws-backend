@@ -160,6 +160,22 @@ export class ProductServiceStack extends cdk.Stack {
     product.addMethod("GET", new apigateway.LambdaIntegration(getProductsByIdLambda));
 
     console.log("Product Service Stack deployed successfully!");
+    
+    // Create `deleteProduct` Lambda function
+    const deleteProductLambda = new lambda.Function(this, "deleteProduct", {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "deleteProduct.handler",
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
+    });
+    
+    productsTable.grantReadWriteData(deleteProductLambda);
+    stocksTable.grantReadWriteData(deleteProductLambda);
+    
+    product.addMethod("DELETE", new apigateway.LambdaIntegration(deleteProductLambda));   
 
     // Outputs
     new cdk.CfnOutput(this, "API Gateway URL", { value: api.url });
