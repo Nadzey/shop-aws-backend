@@ -1,25 +1,28 @@
-import { handler } from "../lambda/getProductsList";
-import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+const { handler } = require("../../lambda/getProductsList");
+const { DynamoDBClient, ScanCommand } = require("@aws-sdk/client-dynamodb");
 
-// Correct Jest mock
+// Mock AWS SDK
 jest.mock("@aws-sdk/client-dynamodb", () => {
-  const mockSend = jest.fn();
   return {
-    DynamoDBClient: jest.fn(() => ({ send: mockSend })),
+    DynamoDBClient: jest.fn(() => ({
+      send: jest.fn(), // Properly mock the `send` method
+    })),
+    TransactWriteItemsCommand: jest.fn(),
     ScanCommand: jest.fn(),
+    GetItemCommand: jest.fn(),
   };
 });
 
 describe("getProductsList Lambda Function", () => {
-  let mockDynamoDB: any;
+  let mockDynamoDB;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     mockDynamoDB = new DynamoDBClient();
-    (mockDynamoDB.send as jest.Mock).mockReset();
   });
 
   test("should return a list of products with stock count", async () => {
-    (mockDynamoDB.send as jest.Mock)
+    mockDynamoDB.send
       .mockResolvedValueOnce({
         Items: [
           {
@@ -30,7 +33,12 @@ describe("getProductsList Lambda Function", () => {
         ],
       })
       .mockResolvedValueOnce({
-        Items: [{ product_id: { S: "8c223f3d-bda3-4ea9-9185-cee09a55dcb2" }, count: { N: "2" } }],
+        Items: [
+          {
+            product_id: { S: "8c223f3d-bda3-4ea9-9185-cee09a55dcb2" },
+            count: { N: "2" },
+          },
+        ],
       });
 
     const response = await handler();
@@ -48,7 +56,7 @@ describe("getProductsList Lambda Function", () => {
   });
 
   test("should return an empty array if no products are found", async () => {
-    mockDynamoDB.send.mockResolvedValue({ Items: [] });
+    mockDynamoDB.send.mockResolvedValueOnce({ Items: [] });
 
     const response = await handler();
     expect(response.statusCode).toBe(200);
@@ -56,7 +64,7 @@ describe("getProductsList Lambda Function", () => {
   });
 
   test("should return a product with count as 0 if stock is not found", async () => {
-    mockDynamoDB.send.mockImplementation((command: any) => {
+    mockDynamoDB.send.mockImplementation((command) => {
       if (command instanceof ScanCommand) {
         if (command.input?.TableName === process.env.PRODUCTS_TABLE) {
           return Promise.resolve({
@@ -76,11 +84,11 @@ describe("getProductsList Lambda Function", () => {
       }
       return Promise.resolve({ Items: [] });
     });
-  
+
     const response = await handler();
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body);
-  
+
     expect(body).toEqual([
       {
         id: "123",
@@ -91,12 +99,14 @@ describe("getProductsList Lambda Function", () => {
       },
     ]);
   });
-  
+
   test("should return a 500 error if DynamoDB throws an error", async () => {
-    mockDynamoDB.send.mockRejectedValue(new Error("DynamoDB error"));
+    mockDynamoDB.send.mockRejectedValueOnce(new Error("DynamoDB error"));
 
     const response = await handler();
     expect(response.statusCode).toBe(500);
-    expect(JSON.parse(response.body)).toEqual({ error: "Internal Server Error" });
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Internal Server Error",
+    });
   });
 });

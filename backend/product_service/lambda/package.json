@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-sns": "^3.758.0"
   }
 }

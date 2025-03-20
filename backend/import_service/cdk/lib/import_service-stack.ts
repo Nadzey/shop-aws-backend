@@ -4,57 +4,87 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3notifications from "aws-cdk-lib/aws-s3-notifications";
-import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
-import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import { Construct } from "constructs";
 
 export class ImportServiceStack extends cdk.Stack {
+  public readonly catalogItemsQueue: sqs.IQueue;
+  public readonly createProductTopic: sns.Topic;
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Create S3 bucket with "uploaded" folder
+    // Create S3 bucket for CSV uploads
     const importBucket = new s3.Bucket(this, "ImportBucket", {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       autoDeleteObjects: false,
     });
 
-    // IAM Role for Lambda functions to interact with S3
-    const lambdaS3Role = new iam.Role(this, "LambdaS3Role", {
+    this.catalogItemsQueue = sqs.Queue.fromQueueAttributes(this, "CatalogItemsQueue", {
+      queueArn: "arn:aws:sqs:us-east-1:468064426767:catalogItemsQueue",
+      queueUrl: "https://sqs.us-east-1.amazonaws.com/468064426767/catalogItemsQueue"
+    });
+        
+    // Create SNS topic for product creation notifications
+    this.createProductTopic = new sns.Topic(this, "CreateProductTopic", {
+      topicName: "createProductTopic",
+    });
+
+    // Subscribe to SNS topic with email notifications
+    this.createProductTopic.addSubscription(
+      new subs.EmailSubscription("nadiakoluzaeva@gmail.com")
+    );
+
+    // IAM Role for Lambda functions
+    const lambdaRole = new iam.Role(this, "LambdaRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
 
-    lambdaS3Role.addManagedPolicy(
+    lambdaRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")
     );
-    
-    lambdaS3Role.addToPolicy(
+
+    lambdaRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
+        actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
         resources: [`${importBucket.bucketArn}/*`, importBucket.bucketArn],
       })
     );
 
-    // Import Products File Lambda
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["sqs:SendMessage"],
+        resources: ["arn:aws:sqs:us-east-1:468064426767:catalogItemsQueue"],
+      })
+    );    
+
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["sns:Publish"],
+        resources: [this.createProductTopic.topicArn],
+      })
+    );
+
+    // `importProductsFile` Lambda - Generates Signed URL for CSV upload
     const importProductsFile = new lambda.Function(this, "ImportProductsFile", {
       functionName: "ImportProductsFile",
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset("../lambda"),
       handler: "importProductsFile.handler",
-      role: lambdaS3Role,
+      role: lambdaRole,
       environment: {
         BUCKET_NAME: importBucket.bucketName,
       },
     });
-    
-    // API Gateway to trigger importProductsFile Lambda
+
+    // API Gateway integration for `importProductsFile`
     const api = new apigateway.RestApi(this, "ImportApi", {
-      restApiName: "ImportServiceApi",
-      deployOptions: {
-        stageName: "prod",
-      },
-      retainDeployments: true,
+      restApiName: "Import Service API",
+      deployOptions: { stageName: "prod" },
     });
-    
+
     const importResource = api.root.addResource("import");
     importResource.addMethod("GET", new apigateway.LambdaIntegration(importProductsFile), {
       requestParameters: {
@@ -62,28 +92,39 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
-    // Import File Parser Lambda
+    // `importFileParser` Lambda - Reads CSV from S3 and sends records to SQS
     const importFileParser = new lambda.Function(this, "ImportFileParser", {
       functionName: "ImportFileParser",
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset("../lambda"),
       handler: "importFileParser.handler",
-      role: lambdaS3Role,
+      role: lambdaRole,
+      environment: {
+        SQS_URL: this.catalogItemsQueue.queueUrl,
+      },
     });
 
-    // S3 Event Notification for File Parser Lambda
+    // S3 Event Notification - Triggers `importFileParser` when new file is uploaded
     importBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3notifications.LambdaDestination(importFileParser),
       { prefix: "uploaded/" }
     );
 
-    // Use the existing CloudFront distribution from Frontend
-    const frontendCloudFrontDomainName = cdk.Fn.importValue("FrontendCloudFrontURL");
-    
-    // Outputs
-    new cdk.CfnOutput(this, "BucketName", { value: importBucket.bucketName });
-    new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url, exportName: "ImportServiceApiUrl" });
-    new cdk.CfnOutput(this, "CloudFrontURL", { value: frontendCloudFrontDomainName, exportName: "ImportServiceCloudFrontURL" });
+    // Output the API Gateway URL, SQS ARN, and SNS ARN
+    new cdk.CfnOutput(this, "ImportServiceApiUrl", {
+      value: api.url,
+      exportName: "ImportServiceApiUrl",
+    });
+
+    new cdk.CfnOutput(this, "CatalogItemsQueueArn", {
+      value: this.catalogItemsQueue.queueArn,
+      exportName: "CatalogItemsQueueArn",
+    });
+
+    new cdk.CfnOutput(this, "CreateProductTopicArn", {
+      value: this.createProductTopic.topicArn,
+      exportName: "CreateProductTopicArn",
+    });
   }
 }

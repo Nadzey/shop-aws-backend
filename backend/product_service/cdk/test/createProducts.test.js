@@ -1,27 +1,35 @@
-import { v4 as uuidv4 } from "uuid";
-import { handler } from "../lambda/createProduct";
-import { DynamoDBClient, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
+const { handler } = require("../../lambda/createProduct");
+const {
+  DynamoDBClient,
+  TransactWriteItemsCommand,
+} = require("@aws-sdk/client-dynamodb");
+const { v4: uuidv4 } = require("uuid");
 
 jest.mock("@aws-sdk/client-dynamodb", () => {
-  const mockSend = jest.fn();
   return {
-    DynamoDBClient: jest.fn(() => ({ send: mockSend })),
+    DynamoDBClient: jest.fn(() => ({
+      send: jest.fn(), // Properly mock the `send` method
+    })),
     TransactWriteItemsCommand: jest.fn(),
+    ScanCommand: jest.fn(),
+    GetItemCommand: jest.fn(),
   };
 });
 
+jest.mock("uuid", () => ({
+  v4: jest.fn(() => "test-uuid"),
+}));
+
 describe("createProduct Lambda Function", () => {
-  let mockDynamoDB: any;
+  let mockDynamoDB;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     mockDynamoDB = new DynamoDBClient();
-    (mockDynamoDB.send as jest.Mock).mockReset();
   });
 
   test("should create a product successfully", async () => {
-    (mockDynamoDB.send as jest.Mock).mockResolvedValueOnce({});
-
-    console.log("Generated UUID:", uuidv4());
+    mockDynamoDB.send.mockResolvedValueOnce({});
 
     const event = {
       body: JSON.stringify({
@@ -35,6 +43,10 @@ describe("createProduct Lambda Function", () => {
     const response = await handler(event);
 
     expect(response.statusCode).toBe(201);
+    expect(JSON.parse(response.body)).toEqual({
+      message: "Product created successfully!",
+      id: "test-uuid",
+    });
 
     expect(mockDynamoDB.send).toHaveBeenCalledWith(
       expect.any(TransactWriteItemsCommand)
@@ -46,11 +58,11 @@ describe("createProduct Lambda Function", () => {
       body: JSON.stringify({
         title: "Test Product",
         price: 25.99,
-        // Missing "count"
       }),
     };
 
     const response = await handler(event);
+
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body)).toEqual({
       error: "Invalid input. Title, price, and count are required.",
@@ -70,6 +82,7 @@ describe("createProduct Lambda Function", () => {
     };
 
     const response = await handler(event);
+
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body)).toEqual({
       error: "Invalid input. Title, price, and count are required.",
@@ -79,7 +92,7 @@ describe("createProduct Lambda Function", () => {
   });
 
   test("should return 500 on DynamoDB error", async () => {
-    (mockDynamoDB.send as jest.Mock).mockRejectedValue(new Error("DynamoDB error"));
+    mockDynamoDB.send.mockRejectedValue(new Error("DynamoDB error"));
 
     const event = {
       body: JSON.stringify({
@@ -93,7 +106,9 @@ describe("createProduct Lambda Function", () => {
     const response = await handler(event);
 
     expect(response.statusCode).toBe(500);
-    expect(JSON.parse(response.body)).toEqual({ error: "Internal Server Error" });
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Internal Server Error",
+    });
 
     expect(mockDynamoDB.send).toHaveBeenCalledWith(
       expect.any(TransactWriteItemsCommand)
