@@ -26,21 +26,21 @@ async function moveFileToParsed(bucket, key) {
       })
       .promise();
 
-    console.log(`✅ File moved to: ${parsedKey}`);
+    console.log(`File moved to: ${parsedKey}`);
   } catch (error) {
-    console.error("❌ Error moving file:", error);
+    console.error("Error moving file:", error);
   }
 }
 
 module.exports.handler = async (event) => {
   try {
-    console.log("📩 Received event:", JSON.stringify(event, null, 2));
+    console.log("eceived event:", JSON.stringify(event, null, 2));
 
     const record = event.Records[0];
     const bucket = record.s3.bucket.name;
     const key = record.s3.object.key;
 
-    console.log(`📂 Fetching file from S3: ${bucket}/${key}`);
+    console.log(`Fetching file from S3: ${bucket}/${key}`);
 
     const s3Stream = s3
       .getObject({ Bucket: bucket, Key: key })

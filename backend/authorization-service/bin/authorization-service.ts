@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib';
-import { AuthorizationServiceStack } from '../lib/authorization-service-stack';
+import * as cdk from "aws-cdk-lib";
+import { AuthorizationServiceStack } from "../lib/authorization-service-stack";
 
 const app = new cdk.App();
-new AuthorizationServiceStack(app, 'AuthorizationServiceStack', {
+new AuthorizationServiceStack(app, "AuthorizationServiceStack");
+
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
@@ -17,4 +18,3 @@ new AuthorizationServiceStack(app, 'AuthorizationServiceStack', {
   // env: { account: '123456789012', region: 'us-east-1' },
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
-});
