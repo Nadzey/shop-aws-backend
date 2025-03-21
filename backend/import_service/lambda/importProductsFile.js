@@ -9,11 +9,6 @@ module.exports.handler = async (event) => {
     if (!fileName) {
       return {
         statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "OPTIONS, GET",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
         body: JSON.stringify({ error: "Missing 'name' query parameter" }),
       };
     }
@@ -27,25 +22,9 @@ module.exports.handler = async (event) => {
     const command = new PutObjectCommand(params);
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "OPTIONS, GET",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-      body: JSON.stringify({ url: signedUrl }),
-    };
+    return { statusCode: 200, body: JSON.stringify({ url: signedUrl }) };
   } catch (error) {
     console.error("Error generating signed URL:", error);
-    return {
-      statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "OPTIONS, GET",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-      body: JSON.stringify({ error: error.message }),
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };

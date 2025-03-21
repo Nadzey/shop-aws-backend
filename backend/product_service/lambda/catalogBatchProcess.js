@@ -16,6 +16,7 @@ exports.handler = async (event) => {
   try {
     console.log("Received messages from SQS:", JSON.stringify(event, null, 2));
 
+    // Prepare batch write for DynamoDB
     const transactItems = event.Records.map((record) => {
       const { title, description, price, count } = JSON.parse(record.body);
       const id = uuidv4();
@@ -27,7 +28,7 @@ exports.handler = async (event) => {
             Item: {
               id: { S: id },
               title: { S: title },
-              description: { S: description },
+              description: { S: description || "No description" },
               price: { N: price.toString() },
             },
           },
@@ -42,29 +43,41 @@ exports.handler = async (event) => {
           },
         },
       ];
-    }).flat(); // Flatten array
+    }).flat(); // Flatten the array
 
+    // Write to DynamoDB
     await dynamoDBClient.send(
       new TransactWriteItemsCommand({ TransactItems: transactItems })
     );
 
     console.log("Products saved in DynamoDB!");
 
-    // Notify via SNS
-    await snsClient.send(
-      new PublishCommand({
-        TopicArn: SNS_TOPIC_ARN,
-        Message: `New ${event.Records.length} products added.`,
-        Subject: "Product Import Notification",
-        MessageAttributes: {
-          price: { DataType: "Number", StringValue: price.toString() },
-          count: { DataType: "Number", StringValue: count.toString() },
-          category: { DataType: "String", StringValue: category || "General" },
-        },
+    // Send SNS notifications
+    await Promise.all(
+      event.Records.map(async (record) => {
+        const { title, price, count } = JSON.parse(record.body);
+
+        try {
+          await snsClient.send(
+            new PublishCommand({
+              TopicArn: SNS_TOPIC_ARN,
+              Message: `New product added: ${title}`,
+              Subject: "Product Import Notification",
+              MessageAttributes: {
+                price: { DataType: "Number", StringValue: price.toString() },
+                count: { DataType: "Number", StringValue: count.toString() },
+                category: { DataType: "String", StringValue: "General" },
+              },
+            })
+          );
+          console.log(`SNS Notification Sent for ${title}`);
+        } catch (snsError) {
+          console.error(`Error sending SNS for ${title}:`, snsError);
+        }
       })
     );
 
-    console.log("SNS notification sent!");
+    console.log("All SNS notifications sent!");
 
     return {
       statusCode: 200,

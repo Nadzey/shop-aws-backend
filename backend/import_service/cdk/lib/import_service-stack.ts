@@ -85,11 +85,22 @@ export class ImportServiceStack extends cdk.Stack {
       deployOptions: { stageName: "prod" },
     });
 
+    const importedAuthorizer = new apigateway.TokenAuthorizer(this, "ImportedAuthorizer", {
+      handler: lambda.Function.fromFunctionArn(
+        this,
+        "BasicAuthorizerFunction",
+        "arn:aws:lambda:us-east-1:468064426767:function:AuthorizationServiceStack-BasicAuthorizer2B49C1FC-0djugdOTNCid"
+      ),
+      identitySource: apigateway.IdentitySource.header("Authorization"),
+    });
+    
     const importResource = api.root.addResource("import");
     importResource.addMethod("GET", new apigateway.LambdaIntegration(importProductsFile), {
       requestParameters: {
         "method.request.querystring.name": true,
       },
+      authorizer: importedAuthorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
     // `importFileParser` Lambda - Reads CSV from S3 and sends records to SQS
