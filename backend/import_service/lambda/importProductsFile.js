@@ -4,15 +4,22 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const s3Client = new S3Client({ region: "us-east-1" });
 
 module.exports.handler = async (event) => {
+  console.log("Incoming event:", JSON.stringify(event, null, 2));
+
   try {
-    const fileName = event.queryStringParameters?.name;
+    const rawName = event.queryStringParameters?.name;
+    console.log("Received name param:", rawName);
+
+    // Clean up name if wrapped in quotes (common issue with curl/API Gateway test)
+    const fileName = rawName?.replace(/^"|"$/g, ""); // removes surrounding quotes
+
     if (!fileName) {
       return {
         statusCode: 400,
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "OPTIONS, GET",
-          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Headers": "Content-Type,Authorization",
+          "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
         },
         body: JSON.stringify({ error: "Missing 'name' query parameter" }),
       };
@@ -31,8 +38,8 @@ module.exports.handler = async (event) => {
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "OPTIONS, GET",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
       },
       body: JSON.stringify({ url: signedUrl }),
     };
@@ -42,8 +49,8 @@ module.exports.handler = async (event) => {
       statusCode: 500,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "OPTIONS, GET",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
       },
       body: JSON.stringify({ error: error.message }),
     };
